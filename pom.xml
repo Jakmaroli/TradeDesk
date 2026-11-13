@@ -42,6 +42,13 @@
             <version>${mysql.version}</version>
         </dependency>
 
+        <!-- BCrypt password hashing -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+
         <!-- JFreeChart for price charts -->
         <dependency>
             <groupId>org.jfree</groupId>
