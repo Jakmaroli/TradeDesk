@@ -92,6 +92,8 @@ Plain-text, newline-delimited, fields separated by `|`.
 | Limit Sell | `SELL\|TICKER\|QTY\|LIMIT_PRICE` | `SELL\|TCS\|5\|4100.00` |
 | Cancel Order | `CANCEL\|ORDER_ID` | `CANCEL\|ORD-0042` |
 | Hello | `HELLO\|USERNAME` | `HELLO\|trader_01` |
+| Portfolio | `PORTFOLIO` | `PORTFOLIO` |
+| Quit | `QUIT` | `QUIT` |
 
 ### Server to Client
 
@@ -101,6 +103,11 @@ Plain-text, newline-delimited, fields separated by `|`.
 | Order Filled | `FILL\|ORDER_ID\|TICKER\|QTY\|PRICE` | `FILL\|ORD-0042\|RELIANCE\|10\|2860.00` |
 | Order Rejected | `REJECT\|ORDER_ID\|REASON` | `REJECT\|ORD-0043\|Insufficient funds` |
 | Leaderboard | `LEADERBOARD\|user1:score1,user2:score2,...` | `LEADERBOARD\|jak:1050000,demo:990000` |
+| Welcome | `WELCOME\|USER\|CASH` | `WELCOME\|siri\|1000000.00` |
+| Order Accepted | `ACK\|ORDER_ID\|SIDE\|TICKER\|QTY\|PRICE_OR_MARKET` | `ACK\|A1B2C3D4\|BUY\|TCS\|5\|MARKET` |
+| Cancelled | `CANCELLED\|ORDER_ID` | `CANCELLED\|A1B2C3D4` |
+| Portfolio | `PORTFOLIO\|CASH\|T:QTY,...` | `PORTFOLIO\|980000.00\|TCS:5` |
+| Error | `ERROR\|REASON` | `ERROR\|Unknown command: XYZ` |
 
 ### Rules
 - All prices are in INR, decimal with 2 places

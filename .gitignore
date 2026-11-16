@@ -7,3 +7,4 @@ target/
 *.csv
 *.ser
 src/main/java/com/tradedesk/db/DBConfig.java
+.DS_Store
