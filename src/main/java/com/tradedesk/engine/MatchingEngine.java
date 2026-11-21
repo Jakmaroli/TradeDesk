@@ -38,6 +38,9 @@ public class MatchingEngine implements Runnable {
     // Price tick interval in ms
     private static final long TICK_INTERVAL_MS = 2_000L;
 
+    /** Marker on the username that tells the engine an order is a SELL. */
+    public static final String SELL_PREFIX = "SELL:";
+
     // ── Constructor ────────────────────────────────────────────────────────
     public MatchingEngine(PricingStrategy strategy) {
         this.pricingStrategy = strategy;
@@ -77,20 +80,38 @@ public class MatchingEngine implements Runnable {
      */
     public void submitOrder(Order order) throws InsufficientFundsException, InvalidTickerException {
         // Validate ticker
-        if (!stocks.containsKey(order.getTicker())) {
+        Stock stock = stocks.get(order.getTicker());
+        if (stock == null) {
             throw new InvalidTickerException(order.getTicker());
         }
 
-        // Validate funds for buy orders
-        if (order.getOrderType() == OrderType.MARKET || order.getLimitPrice() > 0) {
-            Portfolio pf     = getOrCreatePortfolio(order.getUsername());
-            double cost      = order.getLimitPrice() * order.getQuantity();
+        Portfolio pf = getOrCreatePortfolio(ownerOf(order));
+
+        if (isBuyOrder(order)) {
+            // Buy: market orders cost the current price, limit orders cost the limit price
+            double unitPrice = (order instanceof MarketOrder)
+                    ? stock.getCurrentPrice()
+                    : order.getLimitPrice();
+            double cost = unitPrice * order.getQuantity();
             if (cost > pf.getCashBalance()) {
                 throw new InsufficientFundsException(cost, pf.getCashBalance());
+            }
+        } else {
+            // Sell: the user must actually own the shares (no cash check for sells)
+            int owned = pf.getHolding(order.getTicker());
+            if (owned < order.getQuantity()) {
+                throw new IllegalArgumentException("Not enough shares: you own " + owned
+                        + " " + order.getTicker() + " but tried to sell " + order.getQuantity());
             }
         }
 
         incomingOrders.offer(order);
+    }
+
+    /** Sell orders carry a "SELL:" prefix on the username; this returns the real user. */
+    public static String ownerOf(Order order) {
+        String u = order.getUsername();
+        return u.startsWith(SELL_PREFIX) ? u.substring(SELL_PREFIX.length()) : u;
     }
 
     // Market order convenience
@@ -158,6 +179,9 @@ public class MatchingEngine implements Runnable {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 running = false;
+            } catch (RuntimeException e) {
+                // One bad order must never kill the engine thread
+                System.err.println("[Engine] Error processing order: " + e.getMessage());
             }
         }
     }
@@ -179,8 +203,6 @@ public class MatchingEngine implements Runnable {
             return;
         }
 
-        Portfolio pf = getOrCreatePortfolio(order.getUsername());
-
         // Route to the right side of the book
         boolean isBuy = isBuyOrder(order);
         if (isBuy) {
@@ -193,25 +215,48 @@ public class MatchingEngine implements Runnable {
             book.addSellOrder(order);
         }
 
-        // Try to match
-        book.tryMatch().ifPresent(trade -> {
-            settleTrade(trade);
-            notifyFilled(trade.getBuyOrder(),  trade.getExecutedPrice());
-            notifyFilled(trade.getSellOrder(), trade.getExecutedPrice());
-        });
+        // Try to match (keep matching while the book is crossed)
+        matchAll(book);
+    }
+
+    /** Match, settle and notify every crossing order in the book. */
+    private void matchAll(OrderBook book) {
+        Optional<Trade> trade;
+        while ((trade = book.tryMatch()).isPresent()) {
+            Trade t = trade.get();
+            try {
+                settleTrade(t);
+                notifyFilled(t.getBuyOrder(),  t.getExecutedPrice());
+                notifyFilled(t.getSellOrder(), t.getExecutedPrice());
+            } catch (IllegalStateException e) {
+                // e.g. buyer spent the cash elsewhere before this matched
+                t.getBuyOrder().setStatus(OrderStatus.CANCELLED);
+                t.getSellOrder().setStatus(OrderStatus.CANCELLED);
+                notifyRejected(t.getBuyOrder(),  e.getMessage());
+                notifyRejected(t.getSellOrder(), e.getMessage());
+            }
+        }
     }
 
     private boolean isBuyOrder(Order order) {
         // Convention: buy orders arrive from BUY network command.
         // We distinguish via a simple marker stored in the username prefix added by ClientHandler.
         // For the standalone engine we treat all submitted orders as buys unless marked SELL:.
-        return !order.getUsername().startsWith("SELL:");
+        return !order.getUsername().startsWith(SELL_PREFIX);
     }
 
     private void settleTrade(Trade trade) {
-        Portfolio buyer  = getOrCreatePortfolio(trade.getBuyer());
-        Portfolio seller = getOrCreatePortfolio(trade.getSeller().replace("SELL:", ""));
+        Portfolio buyer  = getOrCreatePortfolio(ownerOf(trade.getBuyOrder()));
+        Portfolio seller = getOrCreatePortfolio(ownerOf(trade.getSellOrder()));
         double cost = trade.getExecutedPrice() * trade.getQuantity();
+
+        // Check both sides BEFORE changing anything, so a failure leaves no half-trade
+        if (buyer.getCashBalance() < cost) {
+            throw new IllegalStateException("Insufficient funds at execution");
+        }
+        if (seller.getHolding(trade.getTicker()) < trade.getQuantity()) {
+            throw new IllegalStateException("Seller no longer has the shares");
+        }
 
         buyer.deductCash(cost);
         buyer.addHolding(trade.getTicker(), trade.getQuantity(), trade.getExecutedPrice());
@@ -242,7 +287,7 @@ public class MatchingEngine implements Runnable {
     private void tryFillLimitOrders(Stock stock) {
         OrderBook book = orderBooks.get(stock.getTicker());
         if (book == null) return;
-        book.tryMatch(); // re-attempt on price change
+        matchAll(book); // re-attempt on price change, and settle what matches
     }
 
     // ── Observer Notifications ─────────────────────────────────────────────
