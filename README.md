@@ -42,12 +42,24 @@ A real-time, multi-user stock trading simulator built as a client–server appli
 | **Member 4** | Demo script |
 
 ## Running
+
+> **First-time setup:** `DBConfig.java` holds DB credentials and is git-ignored,
+> so a fresh clone will not compile until you create it:
+> ```bash
+> cp src/main/java/com/tradedesk/db/DBConfig.java.example src/main/java/com/tradedesk/db/DBConfig.java
+> ```
+> Then set your MySQL password (edit the file, or set `TRADEDESK_DB_PASSWORD`) and
+> load the schema once: `mysql -u root -p < src/main/resources/db/schema.sql`.
+
 ```bash
 # Compile
 mvn clean compile
 
 # Run tests
 mvn test
+
+# Start the server (matching engine + market maker + MySQL persistence)
+mvn exec:java -Dexec.mainClass=com.tradedesk.network.TradeServer
 
 # Launch UI (requires JavaFX)
 mvn javafx:run
