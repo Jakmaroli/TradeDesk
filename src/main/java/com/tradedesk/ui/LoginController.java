@@ -9,6 +9,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
 
+import com.tradedesk.db.UserDAO;
+
 /**
  * Login screen — MVC Controller for the login view.
  * Covers MVC pattern; JavaFX controls.
@@ -76,33 +78,71 @@ public class LoginController {
         errorLabel.setWrapText(true);
 
         // ── Buttons ───────────────────────────────────────────────────────
+        UserDAO users = new UserDAO();
+
         Button loginBtn = new Button("Login");
-        loginBtn.setMaxWidth(Double.MAX_VALUE);
         loginBtn.getStyleClass().add("accent-btn");
         loginBtn.setStyle("-fx-font-size: 14px; -fx-padding: 10 0 10 0;");
+        loginBtn.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(loginBtn, Priority.ALWAYS);
+
+        Button registerBtn = new Button("Register");
+        registerBtn.setStyle("-fx-font-size: 14px; -fx-padding: 10 0 10 0;");
+        registerBtn.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(registerBtn, Priority.ALWAYS);
+
+        HBox authRow = new HBox(12, loginBtn, registerBtn);
+        authRow.setMaxWidth(Double.MAX_VALUE);
 
         Button demoBtn = new Button("Quick Demo (no server)");
         demoBtn.setMaxWidth(Double.MAX_VALUE);
         demoBtn.setStyle("-fx-padding: 8 0 8 0;");
 
-        // ── Action: Login ─────────────────────────────────────────────────
+        // ── Action: Login (authenticate against the DB) ────────────────────
         loginBtn.setOnAction(e -> {
             String username = userField.getText().trim();
             String password = passField.getText();
             if (username.isEmpty() || password.isEmpty()) {
-                errorLabel.setText("Please enter username and password.");
-                errorLabel.setVisible(true);
+                showError(errorLabel, "Please enter username and password.");
                 return;
             }
-            openDashboard(username);
+            try {
+                if (users.authenticate(username, password)) {
+                    openDashboard(username, true);          // DB-backed session
+                } else {
+                    showError(errorLabel, "Invalid username or password.");
+                }
+            } catch (RuntimeException ex) {
+                showError(errorLabel, "Database unavailable — try Quick Demo.");
+            }
+        });
+
+        // ── Action: Register (create the user in the DB) ───────────────────
+        registerBtn.setOnAction(e -> {
+            String username = userField.getText().trim();
+            String password = passField.getText();
+            if (username.isEmpty() || password.isEmpty()) {
+                showError(errorLabel, "Please enter username and password.");
+                return;
+            }
+            try {
+                if (users.register(username, password)) {
+                    showInfo(errorLabel, "Registered! You can log in now.");
+                } else {
+                    showError(errorLabel, "Username taken, or password too short (min 4).");
+                }
+            } catch (RuntimeException ex) {
+                showError(errorLabel, "Database unavailable — try Quick Demo.");
+            }
         });
 
         // Enter key on password → login
         passField.setOnAction(e -> loginBtn.fire());
 
-        demoBtn.setOnAction(e -> openDashboard("DemoTrader"));
+        // Offline fallback: no DB, no server, default starting balance
+        demoBtn.setOnAction(e -> openDashboard("DemoTrader", false));
 
-        card.getChildren().addAll(form, errorLabel, loginBtn, demoBtn);
+        card.getChildren().addAll(form, errorLabel, authRow, demoBtn);
 
         root.getChildren().addAll(logo, sub, card);
 
@@ -114,8 +154,20 @@ public class LoginController {
         stage.show();
     }
 
-    private void openDashboard(String username) {
-        DashboardController dashboard = new DashboardController(stage, username);
+    private void openDashboard(String username, boolean dbBacked) {
+        DashboardController dashboard = new DashboardController(stage, username, dbBacked);
         dashboard.show();
+    }
+
+    private void showError(Label label, String msg) {
+        label.setTextFill(Color.web("#f85149"));
+        label.setText(msg);
+        label.setVisible(true);
+    }
+
+    private void showInfo(Label label, String msg) {
+        label.setTextFill(Color.web("#3fb950"));
+        label.setText(msg);
+        label.setVisible(true);
     }
 }

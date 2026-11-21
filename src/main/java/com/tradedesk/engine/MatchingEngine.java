@@ -73,6 +73,11 @@ public class MatchingEngine implements Runnable {
         return portfolios.computeIfAbsent(username, u -> new Portfolio(u, 1_000_000.0));
     }
 
+    /** Seed a user's portfolio from a saved state (e.g. loaded from the DB at login). */
+    public void loadPortfolio(Portfolio p) {
+        if (p != null) portfolios.put(p.getUsername(), p);
+    }
+
     // ── Public API ─────────────────────────────────────────────────────────
     /**
      * Submit an order from a client (or the UI).
