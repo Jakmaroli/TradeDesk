@@ -36,10 +36,10 @@ A real-time, multi-user stock trading simulator built as a client–server appli
 ## Work Split
 | Member | Responsibility |
 |---|---|
-| **Member 1** | Trading Engine, JavaFX UI, JUnit tests |
+| **Member 1** | Trading Engine, JavaFX UI, JUnit tests ,Maven build ,Git setup, Integration|
 | **Member 2** | Data Models, DB schema, DAOs |
 | **Member 3** | TCP Server, ClientHandler, PriceFeedThread |
-| **Member 4** | Maven build, Git setup, Integration, Demo script |
+| **Member 4** | Demo script |
 
 ## Running
 ```bash
