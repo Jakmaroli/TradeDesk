@@ -228,6 +228,7 @@ public class MatchingEngine implements Runnable {
                 settleTrade(t);
                 notifyFilled(t.getBuyOrder(),  t.getExecutedPrice());
                 notifyFilled(t.getSellOrder(), t.getExecutedPrice());
+                notifyTrade(t); // persistence hook: only fired after a clean settle
             } catch (IllegalStateException e) {
                 // e.g. buyer spent the cash elsewhere before this matched
                 t.getBuyOrder().setStatus(OrderStatus.CANCELLED);
@@ -299,5 +300,8 @@ public class MatchingEngine implements Runnable {
     }
     private void notifyRejected(Order order, String reason) {
         observers.forEach(o -> o.onOrderRejected(order, reason));
+    }
+    private void notifyTrade(Trade trade) {
+        observers.forEach(o -> o.onTrade(trade));
     }
 }

@@ -31,8 +31,9 @@ public class Trade {
     public LocalDateTime getExecutedAt() { return executedAt; }
     public double getTurnover()      { return executedPrice * quantity; }
 
-    public String getBuyer()  { return buyOrder.getUsername(); }
-    public String getSeller() { return sellOrder.getUsername(); }
+    // Report the real account on each side (sell orders carry a "SELL:" marker on the username).
+    public String getBuyer()  { return MatchingEngine.ownerOf(buyOrder); }
+    public String getSeller() { return MatchingEngine.ownerOf(sellOrder); }
     public String getTicker() { return buyOrder.getTicker(); }
 
     @Override

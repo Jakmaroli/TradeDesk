@@ -10,6 +10,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.tradedesk.engine.MatchingEngine;
 import com.tradedesk.engine.RandomWalkStrategy;
+import com.tradedesk.db.ConnectionPool;
+import com.tradedesk.db.PersistenceObserver;
+import com.tradedesk.db.PortfolioDAO;
+import com.tradedesk.db.TradeHistoryDAO;
+import com.tradedesk.db.UserDAO;
 
 /**
  * Multi-client TCP server.
@@ -66,6 +71,18 @@ public class TradeServer implements Runnable {
         MarketMakerBot bot = new MarketMakerBot(engine);
         engine.addObserver(bot);
         bot.start();
+
+        // 4. Persistence: save every settled trade to MySQL, if the DB is reachable.
+        //    Guarded so the server still runs (in-memory only) when MySQL is down.
+        try {
+            ConnectionPool.getInstance(); // opens the pool; throws if MySQL is unreachable
+            engine.addObserver(new PersistenceObserver(
+                    engine, new TradeHistoryDAO(), new PortfolioDAO(), new UserDAO(), MarketMakerBot.BOT_NAME));
+            System.out.println("[Server] Persistence ON — trades save to MySQL.");
+        } catch (Exception e) {
+            System.out.println("[Server] Persistence OFF — DB unreachable (" + e.getMessage()
+                    + "). Trading works but nothing is saved.");
+        }
 
         System.out.println("[Server] TradeDesk server listening on port " + port);
 
