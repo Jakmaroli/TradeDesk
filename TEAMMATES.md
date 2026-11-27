@@ -81,7 +81,8 @@ Owned by Member 1 along with the engine/UI. Status on the `integration` branch:
 ### Member 4 — Demo script + Final report
 
 **What to build:**
-1. **Demo launch script** — a `run-demo.bat` / `run-demo.sh` that starts MySQL, runs the schema migration, launches `TradeServer` in the background, launches the JavaFX client
+1. **Demo launch script** — ✅ done: `run-demo.bat` / `run-demo.sh` create `DBConfig.java` if
+   missing, compile, launch `TradeServer`, then open the JavaFX client.
 2. **Final report** — project overview, screenshots, architecture diagram, how to build/run, team credits
 
 ---
