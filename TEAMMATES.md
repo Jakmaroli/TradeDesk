@@ -69,12 +69,20 @@ Package: `com.tradedesk.network`
 
 `TradeClient.java` is already implemented and parses incoming messages — test your server against it.
 
-### Member 4 — Integration & Polish
+### Member 1 (Jak) — Integration (in progress)
+
+Owned by Member 1 along with the engine/UI. Status on the `integration` branch:
+- **Login → UserDAO** — real authenticate / register wired in; Quick Demo stays offline. ✅
+- **Load-on-login** — a DB-backed login resumes the user's saved cash + holdings. ✅
+- **Persistence** — every settled trade saves to MySQL via `PersistenceObserver`. ✅
+- **Remaining:** route the dashboard's BUY/SELL through `TradeClient` to the shared `TradeServer`
+  (currently each client trades on its own embedded engine).
+
+### Member 4 — Demo script + Final report
 
 **What to build:**
-1. **Integration glue** — wire `LoginController` to `UserDAO` for real authentication; connect `DashboardController` to `TradeClient` so it can trade over the network instead of only locally
-2. **Demo launch script** — a `run-demo.bat` / `run-demo.sh` that starts MySQL, runs the schema migration, launches `TradeServer` in the background, launches the JavaFX client
-3. **Final README.md** — project overview, screenshots, architecture diagram, how to build/run, team credits
+1. **Demo launch script** — a `run-demo.bat` / `run-demo.sh` that starts MySQL, runs the schema migration, launches `TradeServer` in the background, launches the JavaFX client
+2. **Final report** — project overview, screenshots, architecture diagram, how to build/run, team credits
 
 ---
 

@@ -2,6 +2,7 @@ package com.tradedesk.ui;
 
 import com.tradedesk.engine.*;
 import com.tradedesk.model.*;
+import com.tradedesk.db.PortfolioDAO;
 import javafx.application.Platform;
 import javafx.collections.*;
 import javafx.geometry.*;
@@ -42,8 +43,9 @@ import java.util.*;
  */
 public class DashboardController implements TradeObserver {
 
-    private final Stage  stage;
-    private final String username;
+    private final Stage   stage;
+    private final String  username;
+    private final boolean dbBacked;     // true = authenticated against MySQL (resume saved portfolio)
     private final MatchingEngine engine = TradeDeskApp.ENGINE;
 
     private final ObservableList<TickerRow>    tickerRows    = FXCollections.observableArrayList();
@@ -64,10 +66,27 @@ public class DashboardController implements TradeObserver {
     private final Map<String, List<Double>> priceHistory = new HashMap<>();
     private static final int SPARKLINE_POINTS = 20;
 
-    public DashboardController(Stage stage, String username) {
+    public DashboardController(Stage stage, String username, boolean dbBacked) {
         this.stage    = stage;
         this.username = username;
+        this.dbBacked = dbBacked;
         engine.addObserver(this);
+        loadOrCreatePortfolio();
+    }
+
+    /** Resume the saved portfolio from MySQL when logged in; otherwise start fresh. */
+    private void loadOrCreatePortfolio() {
+        if (dbBacked) {
+            try {
+                Portfolio saved = new PortfolioDAO().load(username);
+                if (saved != null) {            // existing user with saved cash + holdings
+                    engine.loadPortfolio(saved);
+                    return;
+                }
+            } catch (RuntimeException e) {       // DB unreachable — fall back to a fresh portfolio
+                System.err.println("[Dashboard] Could not load saved portfolio: " + e.getMessage());
+            }
+        }
         engine.getOrCreatePortfolio(username);
     }
 
