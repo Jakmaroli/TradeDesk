@@ -43,6 +43,9 @@ A real-time, multi-user stock trading simulator built as a client–server appli
 
 ## Running
 
+**One-command demo:** `run-demo.bat` (Windows) or `./run-demo.sh` (macOS/Linux) —
+creates `DBConfig.java` if missing, compiles, starts the server, and opens the dashboard.
+
 > **First-time setup:** `DBConfig.java` holds DB credentials and is git-ignored,
 > so a fresh clone will not compile until you create it:
 > ```bash
